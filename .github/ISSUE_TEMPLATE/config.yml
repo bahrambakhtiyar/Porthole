@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/bahrambakhtiyar/Porthole/security/advisories/new
+    about: Please report security problems privately, not in a public issue.
+  - name: Questions and troubleshooting
+    url: https://github.com/bahrambakhtiyar/Porthole#troubleshooting
+    about: The README's troubleshooting and FAQ answer the most common questions (viewers can't connect, guest Wi-Fi, porthole.local).

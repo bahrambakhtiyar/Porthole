@@ -1,0 +1,22 @@
+name: Idea or feature request
+description: Something Porthole could do, or do better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The situation, and what gets in the way today.
+      placeholder: In class I share my screen to 30 phones, and ...
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How you picture it working. Rough is fine.
+  - type: textarea
+    id: other
+    attributes:
+      label: Anything else?
+      description: Other tools you've tried, pictures, links.
