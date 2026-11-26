@@ -1,0 +1,59 @@
+# Porthole as a strict snap. Build: snapcraft (CI uses snapcore/action-build).
+# Inside the snap Porthole opens the sharer page in the default browser (xdg-open), because a strict
+# snap can't start the PC's own Chrome as an app window. Recordings go to the real ~/Videos.
+name: porthole
+base: core24 # core26 no longer ships Python
+version: '0.1.0'
+title: Porthole
+summary: Share your screen with phones on the same Wi-Fi
+description: |
+  Porthole shows your computer's screen on phones, tablets and other computers
+  on the same Wi-Fi. People watching open a link or scan a QR code in their
+  browser. They install nothing.
+
+  The picture goes straight from your computer to theirs over your own network,
+  so it works without internet. You can let each person in before they watch,
+  pause, and record what you share.
+
+  This version opens Porthole in your default browser.
+license: AGPL-3.0-only
+website: https://github.com/bahrambakhtiyar/Porthole
+source-code: https://github.com/bahrambakhtiyar/Porthole
+issues: https://github.com/bahrambakhtiyar/Porthole/issues
+grade: stable # the Snap Store takes grade devel only on its edge and beta channels
+confinement: strict
+
+apps:
+  porthole:
+    command: bin/porthole
+    # The menu entry is snap/gui/porthole.desktop (with snap/gui/porthole.png),
+    # which snapcraft picks up for this app by its name.
+    plugs:
+      - network # talk to phones on the local network
+      - network-bind # serve the pages on port 8765 and answer for porthole.local (UDP 5353)
+      - desktop # open the default browser and the recordings folder, show notices
+      - home # save recordings in ~/Videos and read ~/.config/user-dirs.dirs
+
+parts:
+  porthole:
+    plugin: dump
+    source: .
+    override-build: |
+      craftctl default
+      # git here doesn't keep the executable bit, so set it on the wrapper before it moves to bin/
+      chmod 0755 "$CRAFT_PART_INSTALL/snap/local/porthole"
+    organize:
+      snap/local/porthole: bin/porthole
+      LICENSE: usr/share/doc/porthole/LICENSE # the licence (GNU AGPL-3.0), shipped with the snap
+    stage:
+      - porthole
+      - -porthole/__pycache__
+      - web
+      - start.py
+      - bin/porthole
+      - usr/share/doc/porthole/LICENSE
+  runtime:
+    plugin: nil
+    stage-packages:
+      - python3
+      - libnotify-bin # notify-send, for start-up problems when started from the menu

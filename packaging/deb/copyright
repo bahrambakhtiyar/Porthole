@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Porthole
+Upstream-Contact: Bahram Bakhtiyar <bahrambakhtiyar@users.noreply.github.com>
+Source: https://github.com/bahrambakhtiyar/Porthole
+
+Files: *
+Copyright: 2026 Bahram Bakhtiyar
+License: AGPL-3.0-only
+
+License: AGPL-3.0-only

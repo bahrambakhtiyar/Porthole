@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+/recordings/
+/dist/
+/build/
+/apt-repo/
+*.snap
+*.AppImage
+# The project's private notes, kept on the owner's PC only
+/private/

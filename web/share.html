@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/static/theme-boot.js"></script>
+<meta name="theme-color" content="#ffffff">
+<title>Porthole</title>
+<link rel="icon" href="/static/icon.svg?v=ring" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="share-page">
+<main class="page">
+  <header class="top">
+    <h1 class="brand"><span class="mark" aria-hidden="true"></span>Porthole</h1>
+    <div class="segmented" role="radiogroup" aria-label="Theme">
+      <label><input type="radio" name="theme" id="theme-auto" value="auto" checked><span>Auto</span></label>
+      <label><input type="radio" name="theme" id="theme-light" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" id="theme-dark" value="dark"><span>Dark</span></label>
+    </div>
+    <button id="quit" class="text" type="button">Quit</button>
+  </header>
+
+  <p id="status-line" class="status" data-state="idle" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="state">Not sharing</span></p>
+  <p id="say" class="visually-hidden" role="status"></p>
+
+  <section id="busy" class="busy" hidden>
+    <p id="busy-text">Sharing is on in another window or tab.</p>
+    <button id="takeover" class="primary" type="button">Use this one</button>
+  </section>
+
+  <section class="main-action" aria-label="Sharing">
+    <button id="start" class="primary big" type="button">Start sharing</button>
+    <p id="browser-hint" class="line" hidden>To share a browser tab or its sound, open Porthole in your browser. <button id="open-browser" class="text small" type="button">Open in my browser</button></p>
+    <video id="preview" class="preview" autoplay muted playsinline hidden aria-label="What viewers see"></video>
+    <div id="controls" class="controls" hidden>
+      <button id="pause" type="button">Pause</button>
+      <button id="change" type="button">Change</button>
+      <button id="record" type="button">Record</button>
+      <button id="stop" type="button">Stop sharing</button>
+      <button id="mini" type="button" hidden>Mini controls</button>
+    </div>
+    <p id="record-status" class="record-line" hidden></p>
+    <p id="saved" class="line" hidden><span id="saved-text"></span> <button id="open-folder" class="text small" type="button">Open folder</button></p>
+    <p id="notice" class="line notice" hidden></p>
+    <p id="error" class="error" role="alert" hidden></p>
+    <p id="monitor-hint" class="line" hidden>Viewers can see your notifications. Turn on Do not disturb, or share a window instead.</p>
+    <p id="audio-hint" class="line" hidden>No sound is shared. Use Change and turn on "Also share tab audio" or "Also share system audio".</p>
+    <p id="test-note" class="line" hidden>Test mode: viewers see a moving test picture.</p>
+  </section>
+
+  <section id="waiting" class="section" aria-labelledby="waiting-title" hidden>
+    <div class="section-head">
+      <h2 id="waiting-title">Waiting</h2>
+      <button id="deny-all" class="small" type="button" hidden>Deny all</button>
+    </div>
+    <ul id="waiting-list" class="rows"></ul>
+  </section>
+
+  <section class="section" aria-labelledby="join-title">
+    <h2 id="join-title">Join</h2>
+    <div id="join" class="join-body">
+      <div id="qr" class="qr" role="img" aria-label="QR code to open the link on a phone"></div>
+      <div class="join-text">
+        <p id="easy-address" hidden><span id="easy-host" class="easy-host"></span></p>
+        <div class="link-row">
+          <code id="link">Loading…</code>
+          <button id="copy" type="button">Copy</button>
+        </div>
+        <details id="other" class="other" hidden>
+          <summary>Other addresses</summary>
+          <ul id="other-links"></ul>
+        </details>
+      </div>
+    </div>
+    <p id="no-network" class="error" hidden>This PC has no network. Connect it to Wi-Fi or a network cable; the link shows here once it's connected.</p>
+  </section>
+
+  <section id="watching" class="section" aria-labelledby="viewers-title">
+    <div class="section-head">
+      <h2 id="viewers-title" tabindex="-1">Watching</h2>
+      <span id="viewer-count" class="count"></span>
+    </div>
+    <p id="refusal" class="line" hidden></p>
+    <p id="no-viewers" class="empty">No one yet</p>
+    <ul id="viewers" class="rows"></ul>
+  </section>
+
+  <section class="section" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+    <label class="switch-row">
+      <span class="switch-label"><span id="ask-name">Ask before someone watches</span><span id="ask-sub" class="sub">New devices wait until you allow them.</span></span>
+      <input type="checkbox" id="ask" class="toggle" role="switch" aria-labelledby="ask-name" aria-describedby="ask-sub">
+    </label>
+    <label class="switch-row">
+      <span class="switch-label"><span id="easy-name">Easy address</span><span id="easy-sub" class="sub">People on this Wi-Fi can type a short name. Also turns on Ask.</span></span>
+      <input type="checkbox" id="easy" class="toggle" role="switch" aria-labelledby="easy-name" aria-describedby="easy-sub easy-error easy-note">
+    </label>
+    <label class="switch-row">
+      <span class="switch-label"><span id="smooth-name">Smooth motion</span></span>
+      <input type="checkbox" id="smooth" class="toggle" role="switch" aria-labelledby="smooth-name">
+    </label>
+    <p id="easy-error" class="error" hidden></p>
+    <p id="easy-note" class="sub" hidden></p>
+  </section>
+</main>
+<script type="module" src="/static/share.js"></script>
+</body>
+</html>

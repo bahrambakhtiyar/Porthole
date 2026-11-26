@@ -1,0 +1,98 @@
+# Release: on a v* tag, wait until the Linux build of that tag has passed, then make one draft GitHub release
+# with its .deb, AppImage and snap. Only this job writes to the release, so there is never a second draft, and
+# a build that failed means no draft at all: fix it, then tag again (or re-run the failed build and then this
+# workflow).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90 # the Linux workflow's longest path (tests, then the snap) is about 65 minutes
+    # Two runs for one tag (deleted and pushed again) would each find no draft and make one: one at a time.
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write # makes the draft release
+      actions: read # downloads the build workflow's files
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Wait for the Linux build of this tag
+        run: |
+          set -euo pipefail
+          workflow=linux.yml
+          deadline=$((SECONDS + 80 * 60)) # before the job's own limit
+          run=""
+          misses=0
+          # The same commit may also have a run for a branch push: headBranch picks the run for this tag.
+          while [[ -z "$run" ]]; do
+            if ((SECONDS > deadline)); then
+              echo "::error::$workflow didn't finish for $TAG in time."
+              exit 1
+            fi
+            if ! line="$(gh run list --workflow "$workflow" --event push --commit "$SHA" --limit 20 \
+              --json databaseId,headBranch,status,conclusion \
+              --jq 'map(select(.headBranch == env.TAG)) | first | select(. != null) | "\(.databaseId) \(.status) \(.conclusion)"')"; then
+              echo "::warning::Couldn't ask GitHub about $workflow; trying again."
+              line="?"
+            fi
+            if [[ -z "$line" ]]; then
+              # GitHub makes the run when the tag is pushed: one still missing after 5 minutes never will.
+              misses=$((misses + 1))
+              if ((misses >= 10)); then
+                echo "::error::$workflow never started for $TAG (is it turned off under Actions?)."
+                exit 1
+              fi
+            elif [[ "$line" != "?" ]]; then
+              read -r found status conclusion <<<"$line"
+              if [[ "$status" == completed ]]; then
+                if [[ "$conclusion" != success ]]; then
+                  echo "::error::$workflow finished as '$conclusion' (run $found), so there is no draft release."
+                  exit 1
+                fi
+                run="$found"
+                break
+              fi
+            fi
+            sleep 30
+          done
+          echo "$workflow passed (run $run)."
+          echo "BUILD_RUN=$run" >> "$GITHUB_ENV"
+      - name: Download its files and check that exactly the three Linux files are there
+        run: |
+          set -euo pipefail
+          gh run download "$BUILD_RUN" --dir artifacts
+          find artifacts -type f -print | sort
+          for pattern in '*.deb' '*.AppImage' '*.snap'; do
+            count="$(find artifacts -type f -name "$pattern" | wc -l)"
+            if [[ "$count" -ne 1 ]]; then
+              echo "::error::Expected one file like $pattern, found $count."
+              exit 1
+            fi
+          done
+          total="$(find artifacts -type f | wc -l)"
+          if [[ "$total" -ne 3 ]]; then
+            echo "::error::Expected exactly three files (.deb, .AppImage, .snap), found $total."
+            exit 1
+          fi
+      - name: Make the draft release with every file
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find artifacts -type f | sort)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Left by an earlier attempt of this workflow: bring its files up to date.
+            gh release upload "$TAG" --clobber "${files[@]}"
+          else
+            gh release create "$TAG" --draft --verify-tag --title "Porthole ${TAG#v}" --generate-notes "${files[@]}"
+          fi

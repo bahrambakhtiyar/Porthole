@@ -1,0 +1,183 @@
+# Linux: run the tests, then build the .deb, the AppImage and the snap, check that each one starts and
+# quits, and keep them as build artifacts. On a v* tag, release.yml puts them in the draft GitHub release
+# once this run has passed. A pull request gets the tests only.
+name: Linux
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    # Text-only changes don't need a full build (tags always build).
+    paths-ignore: ['**.md', 'docs/**']
+  # The tests are the checks main's branch protection requires, so they run on every
+  # pull request, text-only ones too: a required check that never reports leaves the pull request waiting.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 is the oldest the .deb allows; 3.12 is what the snap (core24) and AppImage use.
+        python-version: ['3.10', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install PyYAML (only the tests that read the YAML files use it)
+        run: python3 -m pip install PyYAML==6.0.3
+      - name: Tests, with the headless-Chrome browser tests (ubuntu-latest has Chrome)
+        run: python3 -m unittest discover -s tests
+        env:
+          REQUIRE_BROWSER: '1'
+
+  deb:
+    needs: tests
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the checking tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends lintian desktop-file-utils appstream
+      - name: Check the desktop file and the AppStream metainfo
+        run: |
+          desktop-file-validate packaging/linux/porthole.desktop
+          appstreamcli validate --no-net packaging/linux/io.github.bahrambakhtiyar.Porthole.metainfo.xml
+          # A tagged build's .deb and AppImage carry the metainfo: its newest release must be the tag's version.
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            PORTHOLE_VERSION="${GITHUB_REF_NAME#v}" python3 packaging/buildinfo.py --check-metainfo
+          fi
+      - name: Build the .deb
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export PORTHOLE_VERSION="${GITHUB_REF_NAME#v}"; fi
+          bash packaging/deb/build.sh
+      - name: Lintian
+        run: lintian --fail-on error --info --display-info dist/*.deb
+      - name: Install it, check the licence, and check that it starts and quits
+        run: |
+          sudo apt-get install -y ./dist/porthole_*_all.deb
+          # The installed copyright file ends with the whole of LICENSE, as DEP-5 text.
+          diff <(bash packaging/deb/dep5_text.sh LICENSE) <(tail -n "$(wc -l <LICENSE)" /usr/share/doc/porthole/copyright)
+          python3 packaging/smoke_test.py -- /usr/bin/porthole
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  appimage:
+    needs: tests
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install python-appimage
+        run: python3 -m pip install python-appimage==1.4.7
+      - name: Download the portable Python (signed-in, so no API rate limit)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/base"
+          if gh release download python3.12 --repo niess/python-appimage --dir "$RUNNER_TEMP/base" \
+               --pattern 'python3.12.*-cp312-cp312-manylinux2014_x86_64.AppImage'; then
+            base="$(find "$RUNNER_TEMP/base" -name '*.AppImage' | head -n 1)"
+            if [[ -n "$base" ]]; then echo "BASE_IMAGE=$base" >> "$GITHUB_ENV"; fi
+          else
+            echo "Couldn't download it; python-appimage will look it up itself."
+          fi
+      - name: Build the AppImage
+        run: bash packaging/appimage/build.sh
+      - name: Check that it carries the licence and the notices, and not what the trim takes out (unpacked, so no FUSE needed)
+        run: |
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE/dist/Porthole-x86_64.AppImage" --appimage-extract >/dev/null
+          cmp squashfs-root/LICENSE "$GITHUB_WORKSPACE/LICENSE"
+          cmp squashfs-root/THIRD-PARTY-NOTICES.txt "$GITHUB_WORKSPACE/packaging/appimage/THIRD-PARTY-NOTICES.txt"
+          # Fails if a library or module the trim takes out (GNU Readline and GDBM among them) is still there,
+          # or a library that stays isn't named in the notices.
+          python3 "$GITHUB_WORKSPACE/packaging/appimage/trim.py" --check squashfs-root
+          # The bundled Python still imports what Porthole needs, and can't import what was taken out.
+          python=squashfs-root/opt/python3.12/bin/python3.12
+          "$python" -I -c 'import ssl, hashlib, hmac, secrets, uuid, ctypes, json, http.server, urllib.request, lzma, bz2'
+          for module in tkinter sqlite3 readline curses dbm.gnu ensurepip; do
+            if "$python" -I -c "import $module" 2>/dev/null; then
+              echo "The AppImage's Python can still import $module." >&2
+              exit 1
+            fi
+          done
+      - name: Check that its runtime is the one the notices name (THIRD-PARTY-NOTICES.txt, section 9)
+        run: |
+          # appimagetool puts the AppImage runtime (libfuse, musl, zlib and more, linked in) at the start of the file,
+          # and the newer appimagetool fetches the latest one at each build. If this fails, the runtime has changed:
+          # see what the new one is made of, update section 9 of the notices and name its commit there.
+          runtime="$("$GITHUB_WORKSPACE/dist/Porthole-x86_64.AppImage" --appimage-version 2>&1 | sed -n 's/^AppImage runtime version: //p')"
+          if [[ -z "$runtime" ]] || ! grep -qF -- "$runtime" "$GITHUB_WORKSPACE/packaging/appimage/THIRD-PARTY-NOTICES.txt"; then
+            echo "The AppImage runtime (${runtime:-its version not found}) isn't the one THIRD-PARTY-NOTICES.txt names in section 9." >&2
+            exit 1
+          fi
+          echo "AppImage runtime: $runtime"
+      - name: Check that it starts and quits
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1' # no FUSE on the runner
+        run: python3 packaging/smoke_test.py -- ./dist/Porthole-x86_64.AppImage
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+  snap:
+    needs: tests
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: On a v* tag, give the snap the tag's version (snapcraft.yaml says 0.1.0)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          PORTHOLE_VERSION: ${{ github.ref_name }}
+        run: |
+          version="$(python3 packaging/buildinfo.py)" # three numbers, or it stops here
+          sed -i "s/^version: .*/version: '$version'/" snap/snapcraft.yaml
+          grep -x "version: '$version'" snap/snapcraft.yaml
+      - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+        id: build
+      - name: Install it, check the licence, and check that it starts and quits
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          sudo snap install --dangerous "$SNAP_FILE"
+          cmp /snap/porthole/current/usr/share/doc/porthole/LICENSE LICENSE
+          python3 packaging/smoke_test.py -- /snap/bin/porthole
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: snap
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error

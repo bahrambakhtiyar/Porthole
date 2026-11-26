@@ -1,0 +1,6 @@
+# Keep LF line endings in every checkout, also on Windows, where git turns them into CRLF by default:
+# bash fails on shell scripts with CRLF, and tests compare some files byte for byte.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.gif binary

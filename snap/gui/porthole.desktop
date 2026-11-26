@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Porthole
+GenericName=Screen sharing
+Comment=Share your screen with phones on the same Wi-Fi
+Exec=porthole --launcher
+Icon=${SNAP}/meta/gui/porthole.png
+Terminal=false
+Categories=Network;RemoteAccess;
+Keywords=screen;share;phone;Wi-Fi;cast;
+StartupNotify=false

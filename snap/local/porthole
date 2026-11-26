@@ -1,0 +1,6 @@
+#!/bin/sh
+# Starts Porthole inside the snap. python3 is the one staged in the snap (or the core24 base's).
+# PORTHOLE_COMMAND tells Porthole how it is started, for its hints ("Try: porthole --port 8766").
+export PORTHOLE_COMMAND=porthole
+# -s -E: the user's own Python packages and PYTHON* settings stay out (PYTHONSAFEPATH, PYTHONPATH), as in the AppImage.
+exec python3 -s -E "$SNAP/start.py" "$@"

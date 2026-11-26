@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Bahram Bakhtiyar -->
+<component type="desktop-application">
+  <id>io.github.bahrambakhtiyar.Porthole</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
+
+  <name>Porthole</name>
+  <summary>Share your screen with phones on the same Wi-Fi</summary>
+  <developer id="io.github.bahrambakhtiyar">
+    <name>Bahram Bakhtiyar</name>
+  </developer>
+
+  <description>
+    <p>
+      Porthole shows your computer's screen on phones, tablets and other computers on the same Wi-Fi.
+      People watching open a link or scan a QR code in their browser. They install nothing.
+    </p>
+    <p>
+      The picture goes straight from your computer to theirs over your own network, so it works
+      without internet. You can let each person in before they watch, pause, and record what you share.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">porthole.desktop</launchable>
+  <url type="homepage">https://github.com/bahrambakhtiyar/Porthole</url>
+  <url type="bugtracker">https://github.com/bahrambakhtiyar/Porthole/issues</url>
+
+  <categories>
+    <category>Network</category>
+    <category>RemoteAccess</category>
+  </categories>
+  <keywords>
+    <keyword>screen sharing</keyword>
+    <keyword>phone</keyword>
+    <keyword>Wi-Fi</keyword>
+  </keywords>
+  <provides>
+    <binary>porthole</binary>
+  </provides>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-11-22">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
