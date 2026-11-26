@@ -479,6 +479,28 @@ def start_server(build, wanted: int | None, command: str | None = None) -> Start
     return Start(port=port, error=f"Couldn't start: {last}")
 
 
+_STOP_SIGNALS = tuple(getattr(signal, name) for name in ("SIGINT", "SIGTERM", "SIGHUP") if hasattr(signal, name))
+
+
+def _start_holding_stop_signals(thread: threading.Thread, serving: threading.Event) -> None:
+    """Start the server's thread, then set `serving`, with Ctrl+C, SIGTERM and SIGHUP held back meanwhile. A stop
+    handler that raised in the middle of Thread.start() could leave a lock in threading's internals released twice
+    ("RuntimeError: release unlocked lock": Porthole crashed instead of stopping; seen on CI, 26 Nov 2026). Held
+    back, a stop that comes then is handled right after, once `serving` says the thread runs. The new thread starts
+    with them held back too, so they always reach this one. Windows has no signal masks: it starts as before."""
+    mask = getattr(signal, "pthread_sigmask", None)
+    if mask is None:
+        thread.start()
+        serving.set()  # only now: shutdown() would wait for ever for a thread that never started
+        return
+    previous = mask(signal.SIG_BLOCK, _STOP_SIGNALS)
+    try:
+        thread.start()
+        serving.set()  # only now: shutdown() would wait for ever for a thread that never started
+    finally:
+        mask(signal.SIG_SETMASK, previous)
+
+
 def _serve(server, serving: threading.Event) -> None:
     """Serve on a thread of its own and wait for it here, so Ctrl+C (or SIGTERM, SIGHUP) interrupts this wait, not
     the server, which goes on taking connections while the pages finish (see _stop_serving). Whatever ended
@@ -492,8 +514,7 @@ def _serve(server, serving: threading.Event) -> None:
             failed.append(err)
 
     thread = threading.Thread(target=run, name="porthole-server", daemon=True)
-    thread.start()
-    serving.set()  # only now: shutdown() would wait for ever for a thread that never started
+    _start_holding_stop_signals(thread, serving)
     while thread.is_alive():
         thread.join(0.2)  # a timeout, so signals are handled while waiting on every system
     if failed:
