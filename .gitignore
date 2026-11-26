@@ -9,3 +9,6 @@ __pycache__/
 *.AppImage
 # The project's private notes, kept on the owner's PC only
 /private/
+# The APT signing key's files, if they are ever made in this folder (packaging/apt/README.md makes them elsewhere)
+porthole-apt-private.asc
+porthole-apt-revoke.rev
