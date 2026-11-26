@@ -40,7 +40,7 @@ class ReleaseWorkflowTextTest(unittest.TestCase):
         self.assertIn("--event push", self.text)  # never a pull request's run, which builds no packages
 
     def test_only_the_linux_build(self):
-        self.assertEqual(sorted(path.name for path in WORKFLOWS.glob("*.yml")), ["linux.yml", "release.yml"])
+        self.assertEqual(sorted(path.name for path in WORKFLOWS.glob("*.yml")), ["linux.yml", "release.yml", "snapstore.yml"])
         self.assertNotRegex(self.text, r"(?i)windows|macos|\.exe\b|\.zip\b")
 
     def test_a_failed_api_call_while_waiting_is_tried_again(self):
