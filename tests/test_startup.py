@@ -409,6 +409,32 @@ class DefaultPortTakeoverTest(FakeBinderMixin, unittest.TestCase):
             app._serve(types.SimpleNamespace(serve_forever=lambda: None), serving)
         self.assertFalse(serving.is_set())
 
+    @unittest.skipUnless(hasattr(app.signal, "pthread_sigmask"), "no signal masks on this system")
+    def test_stop_signals_wait_while_the_server_thread_starts(self):
+        # A Ctrl+C whose handler raised inside Thread.start() left a lock in threading's internals released twice
+        # ("RuntimeError: release unlocked lock", Porthole crashed instead of stopping; seen on CI, 26 Nov 2026).
+        # So the stop signals are held back while the thread starts and `serving` is set, then let through.
+        events = []
+        real_mask = app.signal.pthread_sigmask
+
+        def mask(how, signals):
+            events.append(("block" if how == app.signal.SIG_BLOCK else "restore", set(signals)))
+            return real_mask(how, signals)
+
+        class Recorded(threading.Thread):
+            def start(self):
+                events.append(("start", None))
+                super().start()
+
+        serving = threading.Event()
+        serving_set = serving.set
+        serving.set = lambda: (events.append(("serving", None)), serving_set())
+        with mock.patch.object(app.signal, "pthread_sigmask", mask), mock.patch.object(app.threading, "Thread", Recorded):
+            app._serve(types.SimpleNamespace(serve_forever=lambda: None), serving)
+        kinds = [kind for kind, _ in events]
+        self.assertEqual(kinds, ["block", "start", "serving", "restore"])
+        self.assertTrue({app.signal.SIGINT, app.signal.SIGTERM, app.signal.SIGHUP} <= events[0][1])
+
     def test_with_no_browser_it_says_where_the_running_one_is(self):
         self.busy = {8765}
         self.portholes = {8765: {"app": "porthole", "folder": str(app.APP_FOLDER)}}
