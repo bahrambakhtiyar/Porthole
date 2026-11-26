@@ -43,6 +43,25 @@
     <control>keyboard</control>
   </supports>
 
+  <screenshots>
+    <screenshot type="default">
+      <image type="source" width="1920" height="1080">https://raw.githubusercontent.com/bahrambakhtiyar/Porthole/main/packaging/snapstore/screenshot-1.png</image>
+      <caption>Sharing a slide from the PC to a phone</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source" width="1920" height="1080">https://raw.githubusercontent.com/bahrambakhtiyar/Porthole/main/packaging/snapstore/screenshot-2.png</image>
+      <caption>Phones scan the QR code or open the link</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source" width="1920" height="1080">https://raw.githubusercontent.com/bahrambakhtiyar/Porthole/main/packaging/snapstore/screenshot-3.png</image>
+      <caption>Each phone waits with a code until you press Allow</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source" width="1920" height="1080">https://raw.githubusercontent.com/bahrambakhtiyar/Porthole/main/packaging/snapstore/screenshot-4.png</image>
+      <caption>The Porthole page in its light and dark themes</caption>
+    </screenshot>
+  </screenshots>
+
   <content_rating type="oars-1.1"/>
 
   <releases>
