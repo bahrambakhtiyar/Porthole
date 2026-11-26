@@ -41,24 +41,20 @@ Viewers install nothing. No account and no internet needed.
 
 Porthole is ready for Linux. On Windows and macOS it runs from source for now; installers come later. Downloads are on the [Releases page](https://github.com/bahrambakhtiyar/Porthole/releases).
 
-**Snap** (Ubuntu and most Linux, on 64-bit Intel or AMD PCs):
+**Snap** (Ubuntu and most Linux, on 64-bit Intel or AMD PCs): search for **Porthole** in Ubuntu's App Center, or run
 
 ```bash
 sudo snap install porthole
 ```
 
-Until Porthole is in the Snap Store, download the `.snap` file from Releases and install it. Snap asks for `--dangerous` for any file that doesn't come from the store:
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/porthole)
+
+It updates by itself, and opens Porthole in your default browser, not in its own window.
+
+**.deb** (Ubuntu, Debian, Mint): download the `.deb` file from Releases, then in the folder you saved it to
 
 ```bash
-sudo snap install --dangerous ./porthole_0.1.0_amd64.snap
-```
-
-The snap opens Porthole in your default browser, not in its own window.
-
-**.deb** (Ubuntu, Debian, Mint): download `porthole_0.1.0_all.deb` from Releases, then
-
-```bash
-sudo apt install ./porthole_0.1.0_all.deb
+sudo apt install ./porthole_*_all.deb
 ```
 
 **AppImage** (any Linux on 64-bit Intel or AMD PCs; nothing to install, it brings its own Python): download `Porthole-x86_64.AppImage` from Releases, then
