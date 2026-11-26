@@ -297,7 +297,7 @@ class MetainfoTest(unittest.TestCase):
         self.assertEqual(self.text("launchable[@type='desktop-id']"), "porthole.desktop")
         self.assertIsNotNone(self.root.find("content_rating[@type='oars-1.1']"))
         release = self.root.find("releases/release")
-        self.assertEqual((release.get("version"), release.get("date")), ("0.1.0", "2026-11-22"))
+        self.assertEqual((release.get("version"), release.get("date")), ("0.1.0", "2026-11-26"))
         self.assertTrue(self.root.findall("description/p"))
 
     def test_launchable_is_the_installed_desktop_file(self):
