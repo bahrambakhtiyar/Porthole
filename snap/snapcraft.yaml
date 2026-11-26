@@ -4,22 +4,35 @@
 name: porthole
 base: core24 # core26 no longer ships Python
 version: '0.1.0'
+# Title, summary, description, icon and links go to the Snap Store listing with each upload. The description keeps
+# to the simple Markdown the store shows: short paragraphs and "- " lists, one line each. The same text, and what to
+# set on the store's dashboard, is in packaging/snapstore/listing.md.
 title: Porthole
-summary: Share your screen with phones on the same Wi-Fi
+# The store's icon: snapcraft copies this file into the snap as meta/gui/icon.png, the only icon the store reads
+# (without this key no icon goes with an upload). It is also the menu entry's icon (snap/gui/porthole.desktop).
+icon: snap/gui/porthole.png
+summary: Share your screen with phones and PCs on your Wi-Fi. They just open a link.
 description: |
-  Porthole shows your computer's screen on phones, tablets and other computers
-  on the same Wi-Fi. People watching open a link or scan a QR code in their
-  browser. They install nothing.
+  Porthole shows your computer's screen on phones, tablets and other computers on the same Wi-Fi. People watching scan a QR code or open a link in their browser. They install nothing and need no account.
 
-  The picture goes straight from your computer to theirs over your own network,
-  so it works without internet. You can let each person in before they watch,
-  pause, and record what you share.
+  - Nothing to install for viewers: Chrome on Android, Safari on iPhone and iPad, or any modern browser on a computer.
+  - Works without internet. The picture goes straight from your computer to each screen over your own network.
+  - You decide who watches. With Ask before someone watches, on by default, each new device waits with a 3-digit code until you press Allow.
+  - An easy address, on by default: people on your Wi-Fi can type porthole.local:8765 instead of the link. Some Android phones can't open such names, so they scan the QR code.
+  - Record what you share into your Videos folder, pause for a moment, and keep mini controls at hand in Chrome or Edge.
+  - Light and dark themes.
 
-  This version opens Porthole in your default browser.
+  How it works: start Porthole, and it opens in your default browser. Press Start sharing and pick a screen or a window. Viewers scan the QR code or open the link on their phone or computer.
+
+  Privacy: Porthole makes no internet connections of its own, and the picture and sound are encrypted. The pages use plain HTTP on your own network, so use it on networks you trust, such as your home, office or classroom Wi-Fi.
+
+  Free and open source under the GNU AGPL-3.0.
 license: AGPL-3.0-only
 website: https://github.com/bahrambakhtiyar/Porthole
 source-code: https://github.com/bahrambakhtiyar/Porthole
 issues: https://github.com/bahrambakhtiyar/Porthole/issues
+contact: https://github.com/bahrambakhtiyar/Porthole/issues # questions and problems go to the issues page
+donation: https://kreosus.com/bahram_bakhtiyar
 grade: stable # the Snap Store takes grade devel only on its edge and beta channels
 confinement: strict
 

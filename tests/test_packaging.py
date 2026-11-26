@@ -378,8 +378,9 @@ class SnapTest(unittest.TestCase):
         self.assertEqual(data["version"], "0.1.0")  # a string, not a number
         self.assertEqual(data["grade"], "stable")  # the Snap Store takes grade devel only on edge and beta
         self.assertEqual(data["confinement"], "strict")
-        self.assertTrue(data["summary"] and len(data["summary"]) <= 78)
+        self.assertTrue(data["summary"] and len(data["summary"]) <= 78)  # the Snap Store's limit
         self.assertTrue(data["description"].strip())
+        self.assertIn("default browser", data["description"])  # the snap opens Porthole there, not in its own window
         app = data["apps"]["porthole"]
         self.assertEqual(app["command"], "bin/porthole")
         self.assertEqual(sorted(app["plugs"]), ["desktop", "home", "network", "network-bind"])
@@ -395,6 +396,34 @@ class SnapTest(unittest.TestCase):
             self.assertIn(wanted, app_part["stage"])
         self.assertNotRegex(self.YAML.read_text(encoding="utf-8"), r"[\w.+-]+@[\w-]+\.\w+")  # no email addresses
 
+    @unittest.skipUnless(yaml, "PyYAML not installed")
+    def test_store_links(self):
+        # snapcraft 8 sends these to the Snap Store listing with each upload, as plain URLs for core24 snaps. Contact
+        # is the issues page, so no email address is published.
+        data = yaml.safe_load(self.YAML.read_text(encoding="utf-8"))
+        self.assertEqual(
+            {key: data.get(key) for key in ("website", "source-code", "issues", "contact", "donation")},
+            {
+                "website": "https://github.com/bahrambakhtiyar/Porthole",
+                "source-code": "https://github.com/bahrambakhtiyar/Porthole",
+                "issues": "https://github.com/bahrambakhtiyar/Porthole/issues",
+                "contact": "https://github.com/bahrambakhtiyar/Porthole/issues",
+                "donation": "https://kreosus.com/bahram_bakhtiyar",
+            },
+        )
+        self.assertEqual(data["donation"], (ROOT / ".github" / "FUNDING.yml").read_text(encoding="utf-8").split('"')[1])
+
+    @unittest.skipUnless(yaml, "PyYAML not installed")
+    def test_store_icon(self):
+        # snapcraft copies the `icon` file into the snap as meta/gui/icon.png, the only icon the Snap Store reads from an
+        # upload; without the key the store page shows a placeholder. The store takes a square icon under 256 KB.
+        data = yaml.safe_load(self.YAML.read_text(encoding="utf-8"))
+        self.assertEqual(data["icon"], "snap/gui/porthole.png")
+        icon = (ROOT / data["icon"]).read_bytes()
+        self.assertEqual(icon, (ROOT / "assets" / "icon.png").read_bytes())  # the app icon, the ring logo
+        self.assertEqual(png_size(icon), (256, 256))
+        self.assertLess(len(icon), 256 * 1024)
+
     def test_snapcraft_yaml_has_no_tabs(self):
         self.assertNotIn("\t", self.YAML.read_text(encoding="utf-8"))
 
@@ -404,6 +433,164 @@ class SnapTest(unittest.TestCase):
         self.assertIn("grade: stable", step)
         self.assertNotIn("first set", step)
         self.assertNotIn("`devel` now", step)
+
+
+SNAPSTORE = ROOT / "packaging" / "snapstore"
+STORE_SCREENSHOTS = ("screenshot-1.png", "screenshot-2.png", "screenshot-3.png", "screenshot-4.png")
+STORE_IMAGES = ("banner.png", *STORE_SCREENSHOTS)
+STORE_MAX_BYTES = 2_000_000  # the Snap Store's limit for the banner and each screenshot
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+# The Snap Store's categories, as its dashboard lists them.
+STORE_CATEGORIES = {
+    "Art and Design", "Books and Reference", "Development", "Devices and IoT", "Education", "Entertainment", "Finance",
+    "Games", "Health and Fitness", "Music and Audio", "News and Weather", "Personalisation", "Photo and Video",
+    "Productivity", "Science", "Security", "Server and Cloud", "Social", "Utilities",
+}
+
+
+def png_size(data: bytes) -> tuple[int, int]:
+    """Width and height from a PNG's header."""
+    assert data[:8] == PNG_SIGNATURE and data[12:16] == b"IHDR", data[:16]
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+class GitHubSocialPreviewTest(unittest.TestCase):
+    """The picture GitHub shows when the repository's link is shared (Settings > General > Social preview): 2:1,
+    1280 x 640, a PNG under 1 MB, made by tools/store_images.mjs in the banner's design."""
+
+    def test_size_and_file(self):
+        path = ROOT / "packaging" / "github" / "social-preview.png"
+        data = path.read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual((int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")), (1280, 640))
+        self.assertLess(len(data), 1_000_000)
+
+    def test_the_tool_makes_it(self):
+        tool = (ROOT / "tools" / "store_images.mjs").read_text(encoding="utf-8")
+        self.assertIn("social-preview", tool)
+        self.assertIn("--social-only", tool)
+
+
+class SnapStoreListingTest(unittest.TestCase):
+    """packaging/snapstore/: the banner, the screenshots and listing.md, what goes where on the store's dashboard.
+    tools/store_images.mjs makes the pictures; it needs Chrome and takes a while, so it isn't run here."""
+
+    LISTING = SNAPSTORE / "listing.md"
+    TOOL = ROOT / "tools" / "store_images.mjs"
+
+    def listing(self) -> str:
+        return self.LISTING.read_text(encoding="utf-8")
+
+    def pasted(self, label: str) -> str:
+        """The text in listing.md's code block under **label**."""
+        found = re.search(rf"\*\*{label}\*\*[^\n]*\n\n```text\n(.*?)\n```", self.listing(), re.S)
+        self.assertIsNotNone(found, label)
+        return found.group(1)
+
+    def test_the_folder_holds_the_five_pictures(self):
+        # Up to five pictures in all, and the banner may count toward them: the banner and four screenshots.
+        self.assertEqual(sorted(p.name for p in SNAPSTORE.iterdir() if p.suffix != ".md"), sorted(STORE_IMAGES))
+        self.assertLessEqual(len(STORE_IMAGES), 5)
+
+    def test_png_files_under_2_mb(self):
+        for name in STORE_IMAGES:
+            with self.subTest(name=name):
+                data = (SNAPSTORE / name).read_bytes()
+                self.assertEqual(data[:8], PNG_SIGNATURE)
+                self.assertLess(len(data), STORE_MAX_BYTES)
+
+    def test_the_banner_is_3_to_1(self):
+        # Exactly 3:1, from 1920 × 640 to 4320 × 1440, named banner.png.
+        width, height = png_size((SNAPSTORE / "banner.png").read_bytes())
+        self.assertEqual(width, 3 * height)
+        self.assertTrue(1920 <= width <= 4320, width)
+        self.assertEqual((width, height), (1920, 640))  # as tools/store_images.mjs makes it
+
+    def test_the_screenshots_fit_the_store(self):
+        # At least 480 × 480, between 1:2 and 2:1.
+        for name in STORE_SCREENSHOTS:
+            with self.subTest(name=name):
+                width, height = png_size((SNAPSTORE / name).read_bytes())
+                self.assertGreaterEqual(min(width, height), 480)
+                self.assertTrue(0.5 <= width / height <= 2, (width, height))
+                self.assertEqual((width, height), (1920, 1080))  # as tools/store_images.mjs makes them
+
+    def test_png_size(self):
+        header = PNG_SIGNATURE + b"\x00\x00\x00\rIHDR" + (1920).to_bytes(4, "big") + (640).to_bytes(4, "big")
+        self.assertEqual(png_size(header + b"\x08\x06\x00\x00\x00"), (1920, 640))
+
+    def test_the_listing_names_each_picture_in_order(self):
+        text = self.listing()
+        places = [text.index(f"`{name}`") for name in STORE_IMAGES]
+        self.assertEqual(places, sorted(places))
+        rows = [line for line in text.splitlines() if re.match(r"\s*\| \d \| `", line)]
+        self.assertEqual(len(rows), len(STORE_IMAGES))
+        for row, name in zip(rows, STORE_IMAGES):
+            with self.subTest(name=name):
+                self.assertIn(f"`{name}`", row)
+                alt = row.rstrip(" |").rsplit("|", 1)[1].strip()  # the last column: the alt text
+                self.assertGreater(len(alt), 40, row)
+
+    @unittest.skipUnless(yaml, "PyYAML not installed")
+    def test_the_listing_matches_snapcraft_yaml(self):
+        # The title, summary and description go to the store with each upload: listing.md shows the same text.
+        data = yaml.safe_load((ROOT / "snap" / "snapcraft.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(self.pasted("Title"), data["title"])
+        self.assertEqual(self.pasted("Summary"), data["summary"])
+        self.assertEqual(self.pasted("Description"), data["description"].rstrip("\n"))
+        stated = re.search(r"\*\*Summary\*\* \((\d+) characters", self.listing())
+        self.assertEqual(int(stated.group(1)), len(data["summary"]))
+        self.assertLessEqual(len(data["summary"]), 78)
+        for link in ("website", "source-code", "issues", "contact", "donation"):
+            with self.subTest(link=link):
+                self.assertIn(f"| {data[link]} |", self.listing())
+
+    def test_the_description_is_short_and_plain(self):
+        # The store shows simple Markdown: short paragraphs and "- " lists, nothing else.
+        text = self.pasted("Description")
+        self.assertLessEqual(len(text.split()), 250)
+        for line in text.splitlines():
+            with self.subTest(line=line[:40]):
+                self.assertNotRegex(line, r"[*_`#\[]|^\s+\S")  # no emphasis, code, headings, links or indented lines
+
+    def test_two_real_categories(self):
+        text = self.listing()
+        primary = re.search(r"Primary: \*\*([^*]+)\*\*", text).group(1)
+        secondary = re.search(r"Secondary: \*\*([^*]+)\*\*", text).group(1)
+        self.assertIn(primary, STORE_CATEGORIES)
+        self.assertIn(secondary, STORE_CATEGORIES)
+        self.assertNotEqual(primary, secondary)
+
+    def test_no_email_addresses(self):
+        self.assertNotRegex(self.listing(), r"[\w.+-]+@[\w-]+\.\w+")
+
+    def test_the_tool_uses_the_example_address_and_a_port_of_its_own(self):
+        text = self.TOOL.read_text(encoding="utf-8")
+        for words in ("'192.168.1.20'", "'--no-browser'", "'--host'", "'--record-dir'", "/api/quit", "porthole-settings",
+                      "easy: false", "port > 8800", "port = 8801", "getDisplayMedia", "'packaging', 'snapstore'",
+                      "MAX_BYTES = 2_000_000", "{ width: 1920, height: 1080 }", "{ width: 1920, height: 640 }"):
+            self.assertIn(words, text)
+        for name in STORE_IMAGES:
+            self.assertIn(name.removesuffix(".png"), text)
+        # The sharer page as in normal use, with only the screen picker replaced: test mode would put its note and
+        # its test picture into the store's pictures.
+        self.assertNotIn("?test=1", text)
+
+    @unittest.skipUnless(shutil.which("node"), "node not installed (only needed for the browser-code tests)")
+    def test_the_tool_parses(self):
+        result = subprocess.run([shutil.which("node"), "--check", str(self.TOOL)], capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_design_md_names_the_tool_and_the_listing(self):
+        text = (ROOT / "docs" / "design.md").read_text(encoding="utf-8")
+        start = text.index("\n## How it works\n")
+        section = text[start : text.index("\n## ", start + 1)]
+        self.assertIn("`tools/store_images.mjs`", section)
+        self.assertIn("`node tools/store_images.mjs`", section)
+        start = text.index("\n## Releases\n")
+        releases = text[start : text.index("\n# ", start + 1)]
+        self.assertIn("### Snap Store listing", releases)
+        self.assertIn("packaging/snapstore/listing.md", releases)
 
 
 class AppImageRecipeTest(unittest.TestCase):
