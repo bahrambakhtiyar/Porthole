@@ -1,0 +1,58 @@
+# Snap Store: when a GitHub release is published, upload its snap to the Snap Store's stable channel.
+# The draft release stays the owner's to check; publishing it is the go for the store too. By hand (Actions >
+# Snap Store > Run workflow), it uploads the snap of a release that is already out, such as one published before
+# this workflow existed. The store login is the repository secret SNAPCRAFT_STORE_CREDENTIALS, made with
+# `snapcraft export-login`; without it nothing is uploaded and the run says why.
+name: Snap Store
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The release tag whose snap to upload, for example v0.1.0'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: snapstore-${{ github.event.release.tag_name || inputs.tag }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      # Through env, never written into a command: a tag or an input there could inject shell.
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - name: Check the store login and the tag
+        run: |
+          set -euo pipefail
+          if [[ -z "$SNAPCRAFT_STORE_CREDENTIALS" ]]; then
+            echo "::error::The repository secret SNAPCRAFT_STORE_CREDENTIALS isn't set, so nothing was uploaded."
+            exit 1
+          fi
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' isn't a version tag like v0.1.0."
+            exit 1
+          fi
+      - name: Download the release's snap
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --pattern '*.snap' --dir snap-file
+          ls -l snap-file
+          count="$(find snap-file -name '*.snap' | wc -l)"
+          if [[ "$count" -ne 1 ]]; then
+            echo "::error::Expected one snap in release $TAG, found $count."
+            exit 1
+          fi
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+      - name: Upload it to the stable channel
+        run: snapcraft upload --release=stable snap-file/*.snap
