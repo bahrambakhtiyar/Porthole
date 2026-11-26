@@ -46,8 +46,10 @@ python3 -m unittest discover -s tests
 Before your first contribution can be merged, you agree to the [contributor licence agreement](CLA.md) once:
 
 1. Open your pull request.
-2. A bot comments and asks you to agree.
-3. Reply "I have read the CLA and I agree", or sign through the bot's link.
+2. The CLA assistant ([cla-assistant.io](https://cla-assistant.io)) comments with a link.
+3. Open the link, read the agreement and sign in with GitHub to agree. The "license/cla" check on your pull request turns green, and stays signed for your later pull requests.
+
+If the check doesn't update, comment `recheck` on the pull request.
 
 You keep the copyright in your work; the agreement lets the author also offer Porthole under other terms. The CLA explains why.
 

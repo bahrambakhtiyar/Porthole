@@ -188,7 +188,7 @@ Yes. Porthole is free and open source under the GNU AGPL-3.0. If it helps you, s
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first: the server uses Python's standard library only, the pages are plain HTML, CSS and JavaScript, and every change comes with tests. Your first pull request asks you to agree to the [contributor licence agreement](CLA.md) once. The checks that need real phones are in [docs/manual-tests.md](docs/manual-tests.md). Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
+Bug reports and pull requests are welcome. Questions, ideas and what you use Porthole for go in [Discussions](https://github.com/bahrambakhtiyar/Porthole/discussions). Please read [CONTRIBUTING.md](CONTRIBUTING.md) first: the server uses Python's standard library only, the pages are plain HTML, CSS and JavaScript, and every change comes with tests. Your first pull request asks you to agree to the [contributor licence agreement](CLA.md) once. The checks that need real phones are in [docs/manual-tests.md](docs/manual-tests.md). Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
 
 ## Support
 

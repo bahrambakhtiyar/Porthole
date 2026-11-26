@@ -16,6 +16,6 @@ Thank you for helping with Porthole. Before your first contribution can be merge
 6. **No warranty.** You provide your contribution "as is", without warranties of any kind. You don't have to support it.
 7. **Open source stays.** The author will keep publishing Porthole under an open-source licence approved by the Open Source Initiative, alongside any other terms.
 
-You accept these terms by commenting "I have read the CLA and I agree" on your pull request when the bot asks, or by signing through the bot's link.
+You accept these terms by signing through the link the CLA assistant posts on your first pull request (you sign in with GitHub).
 
 *This text is a plain-language draft and has not been reviewed by a lawyer yet. It will be checked before the project accepts outside contributions.*
