@@ -1,0 +1,10 @@
+# Keeps the GitHub Actions the workflows use up to date: Dependabot opens a pull request when one has a new
+# release, moving its pinned commit and the version comment next to it. Porthole itself has no dependencies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "CI:"

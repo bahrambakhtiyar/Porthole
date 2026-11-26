@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in Porthole doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please don't post a security problem here: use **Report a vulnerability** on the [Security tab](https://github.com/bahrambakhtiyar/Porthole/security) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: I pressed Start sharing and picked my screen, but the phone kept saying "Connecting".
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we see it too?
+      description: The steps, one per line.
+      placeholder: |
+        1. Start Porthole from the app menu
+        2. Scan the QR code with an iPhone
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Porthole?
+      options:
+        - Snap (snap install porthole)
+        - .deb
+        - AppImage
+        - From source (python3 start.py)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Snap: `snap list porthole`. .deb: `dpkg -l porthole`. AppImage or source: the release or commit you downloaded."
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: The PC sharing its screen
+      description: System and browser.
+      placeholder: Ubuntu 26.04, Chrome
+    validations:
+      required: true
+  - type: input
+    id: viewers
+    attributes:
+      label: The devices watching
+      placeholder: iPhone 15 with Safari, Android phone with Chrome
+  - type: textarea
+    id: output
+    attributes:
+      label: What the terminal says (optional)
+      description: Start Porthole from a terminal with `porthole --verbose` (or `python3 start.py --verbose`) and paste what it prints around the problem. Remove anything you'd rather not share.
+      render: text
