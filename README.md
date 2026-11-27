@@ -100,11 +100,7 @@ Every switch, message and option: [Using Porthole in detail](docs/design.md#usin
 
 Porthole is a small web server written with Python's standard library only. It serves two pages, one for you and one for viewers, and passes the short set-up messages between your browser and theirs. The picture goes straight from browser to browser over WebRTC, never through the server. More in [docs/design.md](docs/design.md).
 
-## How Porthole is made
-
-Porthole is built by Bahram Bakhtiyar with a lot of help from Claude, Anthropic's AI, which wrote most of the code and the docs. Bahram decides what Porthole does and how it looks, says yes or no to every change people can see, and tests it on his own Ubuntu PC with an iPhone and an Android phone.
-
-Every change is checked before it lands: over a thousand automated tests run on each pull request (the Python server, the page code, and the real pages in headless Chrome), and each build of main also builds and starts every package. The checks that need real devices are in [docs/manual-tests.md](docs/manual-tests.md), and the reasons behind each design decision are in [docs/design.md](docs/design.md).
+Porthole is built by Bahram Bakhtiyar with help from Claude, Anthropic's AI.
 
 ## Troubleshooting
 
