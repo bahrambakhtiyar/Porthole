@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
@@ -300,6 +301,24 @@ class MetainfoTest(unittest.TestCase):
         self.assertEqual((release.get("version"), release.get("date")), ("0.1.0", "2026-11-26"))
         self.assertTrue(self.root.findall("description/p"))
 
+
+    def test_screenshots_are_the_store_pictures_in_the_repository(self):
+        # Software centres (and AppImageHub's catalogue) show these; without them AppImageHub shows its own test
+        # screenshot, taken with no network. The first is the default, each points at a file on main that exists
+        # here, with its real size and a caption.
+        shots = self.root.findall("screenshots/screenshot")
+        self.assertEqual(len(shots), 4)
+        self.assertEqual([shot.get("type") for shot in shots], ["default", None, None, None])
+        prefix = "https://raw.githubusercontent.com/bahrambakhtiyar/Porthole/main/"
+        for number, shot in enumerate(shots, start=1):
+            (image,) = shot.findall("image")
+            url = (image.text or "").strip()
+            self.assertEqual(url, f"{prefix}packaging/snapstore/screenshot-{number}.png")
+            path = ROOT / url.removeprefix(prefix)
+            self.assertTrue(path.is_file(), path)
+            width, height = struct.unpack(">II", path.read_bytes()[16:24])
+            self.assertEqual((image.get("type"), image.get("width"), image.get("height")), ("source", str(width), str(height)))
+            self.assertTrue((shot.findtext("caption") or "").strip(), url)
     def test_launchable_is_the_installed_desktop_file(self):
         self.assertTrue((LINUX / self.text("launchable[@type='desktop-id']")).is_file())
 
