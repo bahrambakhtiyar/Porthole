@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porthole APT repository</title>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Ccircle cx='32' cy='32' r='14.45' fill='none' stroke='%23ffffff' stroke-width='8.5'/%3E%3C/svg%3E">
+<style>
+  :root { --bg: #ffffff; --text: #17191c; --muted: #5b616b; --code-bg: #f1f3f6; --accent: #2557d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #131416; --text: #e8eaed; --muted: #a3a9b3; --code-bg: #1e2023; --accent: #7fa8ff; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 3rem 1rem; }
+  header { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 1.6rem; margin: 0; }
+  p { margin: 0 0 1rem; }
+  .muted { color: var(--muted); }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  code { font: 0.9rem/1.5 ui-monospace, monospace; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#2563eb"/>
+      <circle cx="32" cy="32" r="14.45" fill="none" stroke="#ffffff" stroke-width="8.5"/>
+    </svg>
+    <h1>Porthole APT repository</h1>
+  </header>
+  <p>Porthole shares your screen with phones and PCs on your Wi-Fi. They just open a link.</p>
+  <p>This site holds Porthole's signed APT repository for Ubuntu, Debian and Mint. To install Porthole and get its updates with the rest of your system, run this once in a terminal:</p>
+  <pre><code>sudo install -d -m 0755 /etc/apt/keyrings &amp;&amp; sudo wget -qO /etc/apt/keyrings/porthole.asc https://bahrambakhtiyar.github.io/Porthole/apt/porthole.asc &amp;&amp; echo "deb [signed-by=/etc/apt/keyrings/porthole.asc] https://bahrambakhtiyar.github.io/Porthole/apt stable main" | sudo tee /etc/apt/sources.list.d/porthole.list &amp;&amp; sudo apt update &amp;&amp; sudo apt install porthole</code></pre>
+  <p class="muted">Other ways to install, and how to use Porthole: <a href="https://github.com/bahrambakhtiyar/Porthole#install">github.com/bahrambakhtiyar/Porthole</a>.</p>
+</main>
+</body>
+</html>

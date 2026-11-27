@@ -56,7 +56,7 @@ jobs:
       - name: Install the checking tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends lintian desktop-file-utils appstream
+          sudo apt-get install -y --no-install-recommends lintian desktop-file-utils appstream reprepro
       - name: Check the desktop file and the AppStream metainfo
         run: |
           desktop-file-validate packaging/linux/porthole.desktop
@@ -71,9 +71,33 @@ jobs:
           bash packaging/deb/build.sh
       - name: Lintian
         run: lintian --fail-on error --info --display-info dist/*.deb
-      - name: Install it, check the licence, and check that it starts and quits
+      - name: Put it in a signed APT repository, signed with a throwaway key
         run: |
-          sudo apt-get install -y ./dist/porthole_*_all.deb
+          set -euo pipefail
+          # The same script apt.yml publishes with, with a key made here and gone after this step.
+          export GNUPGHOME="$RUNNER_TEMP/throwaway-gnupg"
+          install -d -m 0700 "$GNUPGHOME"
+          gpg --batch --pinentry-mode loopback --passphrase ci-only \
+            --quick-generate-key "Porthole CI throwaway <ci@invalid>" ed25519 sign 1d
+          fpr="$(gpg --with-colons --list-secret-keys | awk -F: '$1 == "fpr" {print $10; exit}')"
+          key="$(gpg --batch --pinentry-mode loopback --passphrase ci-only --armor --export-secret-keys "$fpr")"
+          gpgconf --kill all
+          unset GNUPGHOME
+          APT_SIGNING_KEY="$key" APT_SIGNING_KEY_ID="$fpr" APT_SIGNING_PASSPHRASE=ci-only \
+            bash packaging/apt/build-repo.sh /tmp/porthole-apt
+          rm -rf "$RUNNER_TEMP/throwaway-gnupg"
+      - name: Install it from that repository with apt, check the licence, and check that it starts and quits
+        run: |
+          set -euo pipefail
+          # As a person would, from packaging/apt/README.md, with the folder in place of the website. apt checks
+          # the repository's signature against its key and refuses it if the signature is missing or wrong.
+          sudo install -d -m 0755 /etc/apt/keyrings
+          sudo cp /tmp/porthole-apt/porthole.asc /etc/apt/keyrings/porthole.asc
+          echo "deb [signed-by=/etc/apt/keyrings/porthole.asc] file:///tmp/porthole-apt stable main" | sudo tee /etc/apt/sources.list.d/porthole.list
+          sudo apt-get update
+          sudo apt-get install -y porthole
+          deb_version="$(dpkg-deb -f dist/porthole_*_all.deb Version)"
+          test "$(dpkg-query -W -f='${Version}' porthole)" = "$deb_version"
           # The installed copyright file ends with the whole of LICENSE, as DEP-5 text.
           diff <(bash packaging/deb/dep5_text.sh LICENSE) <(tail -n "$(wc -l <LICENSE)" /usr/share/doc/porthole/copyright)
           python3 packaging/smoke_test.py -- /usr/bin/porthole

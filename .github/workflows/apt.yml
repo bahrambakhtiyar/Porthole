@@ -1,0 +1,150 @@
+# APT repository: when a GitHub release is published, build a signed APT repository from its .deb and publish it
+# on GitHub Pages at https://bahrambakhtiyar.github.io/Porthole/apt, then install Porthole from there with apt to
+# check that it works. The draft release stays the owner's to check; publishing it is the go for the repository
+# too. By hand (Actions > APT repository > Run workflow), it publishes a release that is already out, such as one
+# published before this workflow existed. Only the newest release is published (the repository is built from one
+# .deb each time), so an older or pre-release tag is refused. The signing key is three secrets of the environment
+# apt-signing, which only main and v* tags may use, so code on any other branch never gets the key
+# (packaging/apt/README.md says how to make them); without them nothing is published and the run says why.
+name: APT repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The newest release tag, for example v0.1.0'
+        required: true
+
+permissions:
+  contents: read
+
+# One publish at a time, in order: a second run waits instead of cancelling a deployment halfway.
+concurrency:
+  group: apt-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The signing key's secrets live in this environment, not in the repository: only main (a run by hand) and
+    # v* tags (a published release) may use it.
+    environment: apt-signing
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      # Through env, never written into a command: a tag or an input there could inject shell.
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the signing key and the tag
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          APT_SIGNING_KEY_ID: ${{ secrets.APT_SIGNING_KEY_ID }}
+          APT_SIGNING_PASSPHRASE: ${{ secrets.APT_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APT_SIGNING_KEY" || -z "$APT_SIGNING_KEY_ID" || -z "$APT_SIGNING_PASSPHRASE" ]]; then
+            echo "::error::The apt-signing environment's secrets APT_SIGNING_KEY, APT_SIGNING_KEY_ID and APT_SIGNING_PASSPHRASE aren't all set, so nothing was published."
+            exit 1
+          fi
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' isn't a version tag like v0.1.0."
+            exit 1
+          fi
+          # The repository holds one version, so publishing an older release (or a pre-release) would take the
+          # newest one away from everyone who updates.
+          latest="$(gh release view --json tagName --jq .tagName)"
+          if [[ "$TAG" != "$latest" ]]; then
+            echo "::error::'$TAG' isn't the newest release ($latest), so nothing was published."
+            exit 1
+          fi
+      - name: Download the release's .deb
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --pattern '*.deb' --dir dist
+          ls -l dist
+          count="$(find dist -name '*.deb' | wc -l)"
+          if [[ "$count" -ne 1 ]]; then
+            echo "::error::Expected one .deb in release $TAG, found $count."
+            exit 1
+          fi
+      - name: Install reprepro
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends reprepro
+      - name: Build the signed repository
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          APT_SIGNING_KEY_ID: ${{ secrets.APT_SIGNING_KEY_ID }}
+          APT_SIGNING_PASSPHRASE: ${{ secrets.APT_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          bash packaging/apt/build-repo.sh site/apt
+          # A page for anyone who opens the address in a browser, at the site's root and at /apt.
+          cp packaging/apt/index.html site/apt/index.html
+          cp packaging/apt/index.html site/index.html
+          find site -type f | sort
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write # publishes the site
+      id-token: write # proves to Pages that this run is the one publishing
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      SITE: https://bahrambakhtiyar.github.io/Porthole/apt # the address packaging/apt/README.md gives people
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Porthole from the published repository with the README's own command
+        run: |
+          set -euo pipefail
+          want="${TAG#v}"
+          # Pages can take a minute to serve a new deployment everywhere: wait for this version's index.
+          for attempt in $(seq 1 30); do
+            if curl -fsS "$SITE/dists/stable/main/binary-amd64/Packages" | grep -qx "Version: $want"; then
+              break
+            fi
+            if [[ "$attempt" -eq 30 ]]; then
+              echo "::error::$SITE doesn't list Porthole $want after 5 minutes."
+              exit 1
+            fi
+            sleep 10
+          done
+          # The one line packaging/apt/README.md gives people, run as it is. apt asks before installing more than
+          # the one package, and nobody can answer here: say yes in advance, as a person would.
+          setup="$(grep -F '/etc/apt/sources.list.d/porthole.list' packaging/apt/README.md)"
+          if [[ "$(grep -cF '/etc/apt/sources.list.d/porthole.list' packaging/apt/README.md)" -ne 1 || "$setup" != *"$SITE"* ]]; then
+            echo "::error::Expected one setup line naming $SITE in packaging/apt/README.md."
+            exit 1
+          fi
+          echo 'APT::Get::Assume-Yes "true";' | sudo tee /etc/apt/apt.conf.d/90assume-yes
+          bash -euo pipefail -c "$setup"
+          installed="$(dpkg-query -W -f='${Version}' porthole)"
+          if [[ "$installed" != "$want" ]]; then
+            echo "::error::apt installed Porthole $installed, not $want."
+            exit 1
+          fi
+          python3 packaging/smoke_test.py -- /usr/bin/porthole
