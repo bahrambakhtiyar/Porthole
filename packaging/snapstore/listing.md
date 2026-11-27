@@ -71,7 +71,7 @@ Sign in at [snapcraft.io](https://snapcraft.io) with the account that registered
    - Productivity first, because Porthole is for showing your screen to the people in the room: a slide in a meeting, a lesson in a classroom, a document at home. That is where people look for tools to present and work together.
    - Utilities second, as the store's place for small everyday tools, so people browsing for one can find it too.
 
-3. **Video** (optional). The listing can also show a short video from a link (YouTube, Vimeo or asciinema). There is none yet; a 30 to 60 second demo of a real share (Start sharing, a phone scanning the QR code, Allow, the phone watching) can be added later. The README's looping demo (`docs/screenshots/demo-light.gif`) shows the sharer's side of it.
+3. **Video** (optional). The listing can also show a short video from a link (YouTube, Vimeo or asciinema). There is none yet; a 30 to 60 second demo of a real share (Start sharing, a phone scanning the QR code, Allow, the phone watching) can be added later.
 
 4. **Save, then check.** Save the changes, open [snapcraft.io/porthole](https://snapcraft.io/porthole) to see the page as visitors will, and check under the snap's **Releases** that the stable channel has the current release.
 

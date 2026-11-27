@@ -16,15 +16,9 @@ Viewers install nothing. No account and no internet needed.
 [Install](#install) · [How it works](#how-it-works) · [FAQ](#faq) · [Support](#support)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sharer-dark.png">
-  <img src="docs/screenshots/sharer-light.png" alt="The sharer page while sharing: a preview of what viewers see, the buttons, the QR code with the link, and one phone watching" width="420">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/hero-dark.png">
+  <img src="docs/screenshots/hero-light.png" alt="Porthole's page in a browser on a PC while sharing a slide with a chart, and a phone on its side showing the same slide" width="800">
 </picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/viewer-dark.png">
-  <img src="docs/screenshots/viewer-light.png" alt="A phone watching the shared screen in its browser, with its buttons at the bottom" width="300">
-</picture>
-
-<sub>The sharer page on the PC and a phone watching, here sharing Porthole's moving test picture.</sub>
 
 </div>
 
@@ -85,8 +79,8 @@ When Windows Firewall asks about Python, allow it on both **Private** and **Publ
 
 <div align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/demo-dark.gif">
-  <img src="docs/screenshots/demo-light.gif" alt="The sharer page: Start sharing is pressed, an Android phone asks to watch, Allow is pressed and the phone shows as watching" width="560">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/allow-dark.png">
+  <img src="docs/screenshots/allow-light.png" alt="A phone waiting with its 3-digit code, and on the PC the same code next to Allow and Deny" width="800">
 </picture>
 </div>
 

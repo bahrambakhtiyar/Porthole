@@ -1,4 +1,4 @@
-// Helpers for the browser-test runner (run.mjs) and the screenshot tool (tools/screenshots.mjs).
+// Helpers for the browser-test runner (run.mjs) and the picture tool (tools/store_images.mjs).
 // The first part differs between Linux, macOS and Windows: tests/js/browser-support.test.mjs checks it for
 // every system, so it takes the system as an argument. The second part starts Porthole and headless Chrome,
 // drives Chrome over the DevTools protocol (Node 22 or newer, no packages) and stops everything again.
