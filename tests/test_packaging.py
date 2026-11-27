@@ -152,7 +152,7 @@ class GitAttributesTest(unittest.TestCase):
         self.assertEqual(self.rules().get("*"), ["text=auto", "eol=lf"])
 
     def test_images_are_binary(self):
-        for pattern in ("*.png", "*.ico", "*.gif"):  # *.gif: the README's demo (docs/screenshots/)
+        for pattern in ("*.png", "*.ico", "*.gif"):
             self.assertIn("binary", self.rules().get(pattern, []), pattern)
 
 

@@ -5,7 +5,7 @@
 // Needs Chrome or Chromium and Python 3 (found as in tests/browser/run.mjs: CHROME_PATH or the usual places;
 // PYTHON overrides the Python command). Run it again after changing the pages, so the store shows Porthole as it is.
 //
-// Like tools/screenshots.mjs, it starts Porthole on a free port above 8800 (8801 to 8899 when one is free, so
+// It starts Porthole on a free port above 8800 (8801 to 8899 when one is free, so
 // the link stays short) with the example address 192.168.1.20 in the viewer link and the easy address saved as
 // off (nothing is announced on the real network). The sharer page runs as in normal use, not in test mode (so no
 // test note and no test picture): only the browser's screen picker is replaced, by a window showing the banner's
@@ -26,6 +26,11 @@
 // and, in packaging/github/:
 //   social-preview.png 1280 × 640 (2:1): the banner's design for GitHub's social preview (the picture shown when
 //                      the repository's link is shared). `--social-only` makes just this one, without Porthole.
+// and the README's pictures, in docs/screenshots/, each in light and dark (GitHub shows the one that matches the
+// reader's theme), 1600 × 900 and without a caption:
+//   hero-*.png         the sharer page sharing the slide and a phone on its side showing the same slide
+//   allow-*.png        a phone waiting with its code, and the same code on the PC next to Allow and Deny
+// `--readme-only` makes just the README's pictures (it still runs Porthole for the captures).
 // Each window ends on one of the page's section lines, inside the picture, so no row is cut through. Each
 // picture must stay under 2 MB, the store's limit; the tool checks the sizes and stops if one is over. What to
 // upload where is in packaging/snapstore/listing.md. The words use Inter where it is installed, else Noto Sans or
@@ -280,6 +285,17 @@ async function capturePages(chrome) {
     pages.sharerWaiting = await sharerShot(sharer);
     pages.phoneWaiting = await phoneShot(viewer, PHONE);
     if (pages.sharerWaiting.waiting === null) throw new Error('the Waiting section is hidden');
+    // The same moment in the dark theme, for the README's dark pictures; then back to Auto (light here).
+    await sharer.click('theme-dark');
+    await sharer.waitFor(`document.documentElement.dataset.theme === 'dark'`, 'the dark theme');
+    await setMedia(viewer, 'dark');
+    await sleep(600);
+    pages.sharerWaitingDark = await sharerShot(sharer);
+    pages.phoneWaitingDark = await phoneShot(viewer, PHONE);
+    await sharer.click('theme-auto');
+    await sharer.waitFor(`document.documentElement.dataset.theme === 'auto'`, 'the Auto theme');
+    await setMedia(viewer, 'light');
+    await sleep(600);
 
     await sharer.click(`allow-${code}`);
     await expectFrames(viewer, 'video');
@@ -330,7 +346,10 @@ async function capturePages(chrome) {
 
 // ---------- saving and loading the captures ----------
 
-const PICTURES = ['sharerWaiting', 'phoneWaiting', 'sharerWatching', 'phoneSideways', 'phoneBrowser', 'sharerLight', 'sharerDark'];
+const PICTURES = [
+  'sharerWaiting', 'phoneWaiting', 'sharerWaitingDark', 'phoneWaitingDark', 'sharerWatching', 'phoneSideways', 'phoneBrowser',
+  'sharerLight', 'sharerDark',
+];
 
 function savePages(pages, dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -553,6 +572,53 @@ function screenshot4(p) {
     ${dark}`);
 }
 
+// ---------- the README's pictures ----------
+// GitHub shows the light or the dark one to match the reader's theme. No caption: the README says it in words.
+
+const README_OUT = path.join(ROOT, 'docs', 'screenshots');
+const README_SIZE = { width: 1600, height: 900 };
+const README_MAX_BYTES = 1_000_000;
+const README_RINGS = [[70, 800, 460, 62], [1530, 110, 340, 46]];
+
+function readmeDocument(dark, body) {
+  return dark
+    ? document_(README_SIZE, 'linear-gradient(180deg, #172447 0%, #0b1226 100%)', `${rings('rgba(127, 168, 255, 0.08)', README_RINGS)}${body}`)
+    : document_(README_SIZE, 'linear-gradient(180deg, #f3f6ff 0%, #dfe8fd 100%)', `${rings('rgba(37, 99, 235, 0.07)', README_RINGS)}${body}`);
+}
+
+// The top picture: the sharer page sharing the slide, from the top of the page to the line above Join, and a phone
+// on its side in front of the window's empty right side, showing the same slide.
+function readmeHero(p, dark) {
+  const name = dark ? 'sharerDark' : 'sharerWatching';
+  const view = { width: 1000, scale: 1.32, to: p[name].join };
+  const height = windowHeight(p, name, view);
+  const top = Math.round((README_SIZE.height - height) / 2);
+  const pc = browserWindow(p, name, { ...view, x: 110, y: top, dark });
+  const phone = phoneFrame(p, 'phoneSideways', { x: 880, y: top + 212, screenWidth: 580 });
+  return readmeDocument(dark, `${pc}${phone.html}`);
+}
+
+// Step 3: a phone waiting with its code, and the same code on the PC next to Allow and Deny.
+function readmeAllow(p, dark) {
+  const name = dark ? 'sharerWaitingDark' : 'sharerWaiting';
+  const page = p[name];
+  const phone = phoneFrame(p, dark ? 'phoneWaitingDark' : 'phoneWaiting', { x: 1110, y: 70, screenWidth: 344 });
+  const view = { x: 140, width: 900, scale: 1.3, from: page.status, to: page.join };
+  const pc = browserWindow(p, name, { ...view, y: besidePhone(phone, windowHeight(p, name, view)), dark });
+  return readmeDocument(dark, `${pc}${phone.html}`);
+}
+
+async function renderReadme(cdp, dir, pages) {
+  for (const [file, html] of [
+    ['hero-light', readmeHero(pages, false)],
+    ['hero-dark', readmeHero(pages, true)],
+    ['allow-light', readmeAllow(pages, false)],
+    ['allow-dark', readmeAllow(pages, true)],
+  ]) {
+    await render(cdp, dir, file, README_SIZE, html, { out: README_OUT, maxBytes: README_MAX_BYTES });
+  }
+}
+
 // The one picture shared everywhere: on the PC and the phone in the banner, and (drawn on a canvas by fakeScreen) as
 // the shared window in the screenshots. A slide with a title, a bar chart and a ring chart.
 function slide(width) {
@@ -708,8 +774,10 @@ async function main() {
   try {
     const dir = makeTempDir('store');
     for (const name of PICTURES) fs.writeFileSync(path.join(dir, `${name}.png`), pages[name].png);
-    fs.mkdirSync(OUT, { recursive: true });
     log('laying out');
+    await renderReadme(cdp, dir, pages);
+    if (process.argv.includes('--readme-only')) return 0;
+    fs.mkdirSync(OUT, { recursive: true });
     await render(cdp, dir, 'banner', BANNER, banner());
     await render(cdp, dir, 'screenshot-1', SHOT, screenshot1(pages));
     await render(cdp, dir, 'screenshot-2', SHOT, screenshot2(pages));
@@ -733,7 +801,9 @@ main()
   .then((code) => {
     clearTimeout(deadline);
     removeTempDirs();
-    if (code === 0 && !process.argv.includes('--social-only')) log(`Store pictures saved in ${path.relative(ROOT, OUT)}.`);
+    if (code === 0 && !process.argv.includes('--social-only')) {
+      log(process.argv.includes('--readme-only') ? 'README pictures saved.' : `Store and README pictures saved.`);
+    }
     process.exit(code);
   })
   .catch((err) => {
